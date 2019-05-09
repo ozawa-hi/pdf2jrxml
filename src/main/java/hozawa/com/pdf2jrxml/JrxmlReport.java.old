@@ -1,0 +1,497 @@
+package hozawa.com.pdf2jrxml;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JRPrintLine;
+import net.sf.jasperreports.engine.JRPrintPage;
+import net.sf.jasperreports.engine.JRPrintText;
+import net.sf.jasperreports.engine.JRReport;
+import net.sf.jasperreports.engine.JasperCompileManager;
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.base.JRBasePrintLine;
+import net.sf.jasperreports.engine.base.JRBasePrintPage;
+import net.sf.jasperreports.engine.base.JRBasePrintText;
+import net.sf.jasperreports.engine.design.JRDesignBand;
+import net.sf.jasperreports.engine.design.JRDesignElement;
+import net.sf.jasperreports.engine.design.JRDesignExpression;
+import net.sf.jasperreports.engine.design.JRDesignField;
+import net.sf.jasperreports.engine.design.JRDesignQuery;
+import net.sf.jasperreports.engine.design.JRDesignStaticText;
+import net.sf.jasperreports.engine.design.JRDesignStyle;
+import net.sf.jasperreports.engine.design.JRDesignTextField;
+import net.sf.jasperreports.engine.design.JasperDesign;
+import net.sf.jasperreports.engine.export.JRPdfExporter;
+import net.sf.jasperreports.engine.type.HorizontalTextAlignEnum;
+import net.sf.jasperreports.engine.xml.JRXmlWriter;
+import net.sf.jasperreports.export.SimpleExporterInput;
+import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
+import net.sf.jasperreports.export.SimplePdfReportConfiguration;
+
+public class JrxmlReport {
+	private final int A4_WIDTH = 595;
+	private final int A4_HEIGHT = 842;
+	private final int DEFAULT_COLUMN_WIDTH = 555;
+	private final int DEFAULT_LEFT_MARGIN = 20;
+	private final int DEFAULT_RIGHT_MARGIN = 20;
+	private final int DEFAULT_TOP_MARGIN = 20;
+	private final int DEFAULT_BOTTOM_MARGIN = 20;
+	private final String ENCODING = "UTF-8";
+	
+	public void generateJrxml(String pdf_filename, String jrxml_filename) throws JRException {
+		//String jrxml_filename = "jrxml_sample.jrxml";
+		
+//		JRXmlWriteHelper writer = reportWriter.getXmlWriteHelper();
+//		
+//		String namespaceURI = componentKey.getNamespace();
+//		String schemaLocation = 
+//			ComponentsEnvironment.getInstance(jasperReportsContext)
+//				.getBundle(namespaceURI).getXmlParser().getPublicSchemaLocation();
+//		XmlNamespace componentNamespace = new XmlNamespace(namespaceURI, componentKey.getNamespacePrefix(),
+//				schemaLocation);
+		
+		//JasperDesign design = JRXmlLoader.load("filePath");
+		extractTextInPage(pdf_filename);
+		
+		JasperDesign design = generateDesign();
+		JRReport report = JasperCompileManager.compileReport(design);
+		JRXmlWriter.writeReport(report, jrxml_filename, ENCODING);	// (JRReport report, java.lang.String destFileName, java.lang.String encoding) 
+	}
+	
+	private ArrayList<JRDesignElement> extractTextInPage(String pdf_filename) {
+		//String filename = "test.pdf";
+		//String filename = "sample.pdf";
+		
+		ArrayList<JRDesignElement> elementList = new ArrayList<JRDesignElement>();
+		
+        try (PDDocument document = PDDocument.load(new File(pdf_filename))) {
+        	PDFTextStripper textStripper = new PDFTextStripperCustom();
+            textStripper.setSortByPosition(true);
+            for (int page = 1; page <= document.getNumberOfPages(); page++) {
+                textStripper.setStartPage(page);
+                textStripper.setEndPage(page);
+                String pdfFileText = textStripper.getText(document);
+                // split by line
+                String lines[] = pdfFileText.split("\\n");
+                for (int line = 0; line < lines.length; line++) {
+                    System.out.println(String.format("Page: %s, Line: %s, Text: %s", page, line, lines[line]));
+                }
+            }
+
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return elementList;
+	}
+	
+	private JasperDesign generateDesign() throws JRException {
+	    //JasperDesign
+	    JasperDesign jasperDesign = new JasperDesign();
+	    jasperDesign.setName("PDF2JrxmlTest");
+	    jasperDesign.setPageWidth(A4_WIDTH);
+	    jasperDesign.setPageHeight(A4_HEIGHT);
+	    jasperDesign.setColumnWidth(DEFAULT_COLUMN_WIDTH);
+	    jasperDesign.setColumnSpacing(0);
+	    jasperDesign.setLeftMargin(DEFAULT_LEFT_MARGIN);
+	    jasperDesign.setRightMargin(DEFAULT_RIGHT_MARGIN);
+	    jasperDesign.setTopMargin(DEFAULT_TOP_MARGIN);
+	    jasperDesign.setBottomMargin(DEFAULT_BOTTOM_MARGIN);
+		
+		//Fonts
+		JRDesignStyle normalStyle = new JRDesignStyle();
+		normalStyle.setName("Sans_Normal");
+		normalStyle.setDefault(true);
+		normalStyle.setFontName("DejaVu Sans");
+		normalStyle.setFontSize(8f);
+		jasperDesign.addStyle(normalStyle);
+
+		JRDesignStyle boldStyle = new JRDesignStyle();
+		boldStyle.setName("Sans_Bold");
+		boldStyle.setFontName("DejaVu Sans");
+		boldStyle.setFontSize(8f);
+		boldStyle.setBold(Boolean.TRUE);
+		jasperDesign.addStyle(boldStyle);
+
+/*		JRDesignStyle italicStyle = new JRDesignStyle();
+		italicStyle.setName("Sans_Italic");
+		italicStyle.setFontName("DejaVu Sans");
+		italicStyle.setFontSize(8f);
+		italicStyle.setItalic(Boolean.TRUE);
+		jasperDesign.addStyle(italicStyle);
+*/
+		
+	    //Variables
+//	    JRDesignVariable variable = new JRDesignVariable();
+//	    variable.setName("CityNumber");
+//	    variable.setValueClass(java.lang.Integer.class);
+//	    variable.setResetType(ResetTypeEnum.GROUP);
+//	    JRDesignGroup group = new JRDesignGroup();
+//	    //group.setName("CityGroup");
+//	    group.setName("Report");
+//	    variable.setResetGroup(group);
+//	    variable.setCalculation(CalculationEnum.SYSTEM);
+//	    JRDesignExpression expression = new JRDesignExpression();
+//	    expression.setValueClass(java.lang.Integer.class);
+//	    expression.setText("$V{CityNumber} == null ? 1 : ($V{CityNumber} + 1)");
+//	    variable.setInitialValueExpression(expression);
+//	    jasperDesign.addVariable(variable);
+	    
+	    //Parameters
+/*	    JRDesignParameter parameter = new JRDesignParameter();
+	    parameter.setName("ReportTitle");
+	    parameter.setValueClass(java.lang.String.class);
+	    jasperDesign.addParameter(parameter);
+
+	    parameter = new JRDesignParameter();
+	    parameter.setName("OrderByClause");
+	    parameter.setValueClass(java.lang.String.class);
+	    jasperDesign.addParameter(parameter);
+*/	    
+/*
+	    JRDesignBand band = new JRDesignBand();
+	    //band.setHeight(A4_HEIGHT - DEFAULT_TOP_MARGIN - DEFAULT_BOTTOM_MARGIN);
+	    JRDesignTextField textField = new JRDesignTextField();
+	    textField.setX(0);
+	    textField.setY(4);
+	    textField.setWidth(DEFAULT_COLUMN_WIDTH);
+	    textField.setHeight(15);
+	    textField.setBackcolor(new Color(0xC0, 0xC0, 0xC0));
+	    textField.setMode(ModeEnum.OPAQUE);
+	    textField.setHorizontalTextAlign(HorizontalTextAlignEnum.LEFT);
+	    textField.setStyle(boldStyle);
+//	    expression = new JRDesignExpression();
+//	    expression.setValueClass(java.lang.String.class);
+//	    expression.setText("\"  \" + String.valueOf($V{CityNumber}) + \". \" + String.valueOf($F{City})");
+//	    textField.setExpression(expression);
+	    band.addElement(textField);
+	    JRDesignLine line = new JRDesignLine();
+	    line.setX(0);
+	    line.setY(19);
+	    line.setWidth(DEFAULT_COLUMN_WIDTH);
+	    line.setHeight(0);
+	    band.addElement(line);
+*/
+	    
+	    //Query
+	    JRDesignQuery query = new JRDesignQuery();
+//	    query.setText("SELECT * FROM address ORDER BY $P!{OrderByClause}");
+	    query.setText("SELECT * FROM address LIMIT 1");
+	    jasperDesign.setQuery(query);
+
+	    //Fields
+	    Map<String, Object> fields = new HashMap<String, Object>();
+	    fields.put("Id", java.lang.Integer.class);
+	    fields.put("FirstName", java.lang.String.class);
+	    fields.put("LastName", java.lang.String.class);
+	    fields.put("Street", java.lang.String.class);
+	    fields.put("City", java.lang.String.class);
+
+	    for (Map.Entry<String, Object> entry : fields.entrySet()) {
+	    	JRDesignField field = new JRDesignField();
+	    	field.setName(entry.getKey());
+	    	field.setValueClass((Class<?>) entry.getValue());
+	    	jasperDesign.addField(field);
+	    }
+	    
+/*	    JRDesignField field = new JRDesignField();
+	    field.setName("Id");
+	    field.setValueClass(java.lang.Integer.class);
+	    jasperDesign.addField(field);
+
+	    field = new JRDesignField();
+	    field.setName("FirstName");
+	    field.setValueClass(java.lang.String.class);
+	    jasperDesign.addField(field);
+
+	    field = new JRDesignField();
+	    field.setName("LastName");
+	    field.setValueClass(java.lang.String.class);
+	    jasperDesign.addField(field);
+
+	    field = new JRDesignField();
+	    field.setName("Street");
+	    field.setValueClass(java.lang.String.class);
+	    jasperDesign.addField(field);
+
+	    field = new JRDesignField();
+	    field.setName("City");
+	    field.setValueClass(java.lang.String.class);
+	    jasperDesign.addField(field);
+*/
+	    //some code
+	    //Title
+	    JRDesignBand band = new JRDesignBand();
+	    //band = new JRDesignBand();
+	    band.setHeight(A4_HEIGHT - DEFAULT_TOP_MARGIN - DEFAULT_BOTTOM_MARGIN);
+/*
+	    JRDesignLine line = new JRDesignLine();
+	    line = new JRDesignLine();
+	    line.setX(0);
+	    line.setY(0);
+	    line.setWidth(DEFAULT_COLUMN_WIDTH);
+	    line.setHeight(0);
+	    band.addElement(line);
+*/
+//	    List<ReportElement> elements = new ArrayList<ReportElement>();
+//	    elements.add(new ReportElement(new JRDesignStaticText(), 0, 10, 200, 30, HorizontalTextAlignEnum.LEFT, "boldStyle", 20f, "ID:"));
+//	    elements.add(new ReportElement(new JRDesignTextField(), 220, 10, 200, 30, HorizontalTextAlignEnum.LEFT, "normalStyle", 20f, "ID:"));
+
+	    List<JRDesignElement> elementList = new ArrayList<JRDesignElement>();
+	    
+	    JRDesignStaticText labelText = new JRDesignStaticText();
+	    labelText.setX(0);
+	    labelText.setY(10);
+	    labelText.setWidth(200);
+	    labelText.setHeight(30);
+	    labelText.setHorizontalTextAlign(HorizontalTextAlignEnum.LEFT);
+	    labelText.setStyle(boldStyle);
+	    labelText.setFontSize(20f);
+	    labelText.setText("ID:");
+	    elementList.add(labelText);
+	    //band.addElement(labelText);
+	    
+	    JRDesignTextField textField = new JRDesignTextField();
+	    textField.setBlankWhenNull(true);
+	    textField.setX(220);
+	    textField.setY(10);
+	    textField.setWidth(200);
+	    textField.setHeight(30);
+	    textField.setHorizontalTextAlign(HorizontalTextAlignEnum.LEFT);
+	    textField.setStyle(normalStyle);
+	    textField.setFontSize(22f);
+	    JRDesignExpression expression = new JRDesignExpression();
+//	    expression.setValueClass(java.lang.String.class);
+	    //expression.setText("$P{ReportTitle}");
+	    expression.setText("$F{Id}");
+	    textField.setExpression(expression);
+	    elementList.add(textField);
+	    //band.addElement(textField);
+	    
+	    for (JRDesignElement element : elementList) {
+	    	band.addElement(element);
+	    }
+	    
+	    jasperDesign.setTitle(band);
+	    
+/*
+	    //Detail
+	    band = new JRDesignBand();
+	    band.setHeight(40);
+
+	    JRDesignStaticText staticText = new JRDesignStaticText();
+	    staticText.setX(0);
+	    staticText.setY(0);
+	    staticText.setWidth(60);
+	    staticText.setHeight(20);
+	    staticText.setMode(ModeEnum.OPAQUE);
+	    staticText.setHorizontalTextAlign(HorizontalTextAlignEnum.LEFT);
+	    staticText.setStyle(boldStyle);
+	    staticText.setText("ID: ");
+	    staticText.getLineBox().getLeftPen().setLineWidth(1);
+	    staticText.getLineBox().getTopPen().setLineWidth(1);
+	    staticText.getLineBox().setLeftPadding(10);
+	    band.addElement(staticText);
+
+	    textField = new JRDesignTextField();
+	    textField.setX(60);
+	    textField.setY(0);
+	    textField.setWidth(200);
+	    textField.setHeight(20);
+	    textField.setHorizontalTextAlign(HorizontalTextAlignEnum.LEFT);
+	    textField.setStyle(normalStyle);
+//	    expression = new JRDesignExpression();
+//	    expression.setValueClass(java.lang.Integer.class);
+//	    expression.setText("$F{Id}");
+//	    textField.setExpression(expression);
+	    textField.getLineBox().getTopPen().setLineWidth(1);
+	    textField.getLineBox().getRightPen().setLineWidth(1);
+	    textField.getLineBox().setLeftPadding(10);
+	    band.addElement(textField);
+
+	    staticText = new JRDesignStaticText();
+	    staticText.setX(0);
+	    staticText.setY(20);
+	    staticText.setWidth(60);
+	    staticText.setHeight(20);
+	    staticText.setMode(ModeEnum.OPAQUE);
+	    staticText.setHorizontalTextAlign(HorizontalTextAlignEnum.LEFT);
+	    staticText.setStyle(boldStyle);
+	    staticText.setText("Name: ");
+	    staticText.getLineBox().getLeftPen().setLineWidth(1);
+	    staticText.getLineBox().getBottomPen().setLineWidth(1);
+	    staticText.getLineBox().setLeftPadding(10);
+	    band.addElement(staticText);
+
+	    textField = new JRDesignTextField();
+	    textField.setStretchWithOverflow(true);
+	    textField.setX(60);
+	    textField.setY(20);
+	    textField.setWidth(200);
+	    textField.setHeight(20);
+	    textField.setPositionType(PositionTypeEnum.FLOAT);
+	    textField.setStyle(normalStyle);
+//	    expression = new JRDesignExpression();
+//	    expression.setValueClass(java.lang.String.class);
+//	    expression.setText("$F{FirstName} + \" \" + $F{LastName}");
+//	    textField.setExpression(expression);
+	    textField.getLineBox().getRightPen().setLineWidth(1);
+	    textField.getLineBox().getBottomPen().setLineWidth(1);
+	    textField.getLineBox().setLeftPadding(10);
+	    band.addElement(textField);
+
+	    JRSection section = jasperDesign.getDetailSection();
+*/
+	    //((JRDesignSection)jasperDesign.getDetailSection()).addBand(band);
+	    return jasperDesign;
+	}
+	
+
+	
+	public void generatePDF() {
+		long start = System.currentTimeMillis();
+		
+		//Map<String, Object> param = new HashMap<String, Object>();
+		
+		//String jrxml_filename = "/home/hozawa/JaspersoftWorkspace/Test/xls_export.jrxml";
+		String output_filename = "xls_ellipse_test.pdf";
+	  
+		try {
+			//JasperReport jasperReport = JasperCompileManager.compileReport(jrxml_filename);
+			//JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, param, new JREmptyDataSource() );
+			JasperPrint jasperPrint = generateJasperPrint();
+			
+			JRPdfExporter exporter = new JRPdfExporter();
+			exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+			exporter.setExporterOutput(new SimpleOutputStreamExporterOutput( new File(output_filename)));
+			SimplePdfReportConfiguration configuration = new SimplePdfReportConfiguration();
+			exporter.setConfiguration(configuration);
+			
+			exporter.exportReport();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		System.out.println("List Filling time : " + (System.currentTimeMillis() - start));
+	}
+	
+	private JasperPrint generateJasperPrint() throws JRException {
+		//JasperPrint
+		JasperPrint jasperPrint = new JasperPrint();
+		jasperPrint.setName("NoReport");
+		jasperPrint.setPageWidth(595);
+		jasperPrint.setPageHeight(842);
+		
+		//Fonts
+		JRDesignStyle normalStyle = new JRDesignStyle();
+		normalStyle.setName("Sans_Normal");
+		normalStyle.setDefault(true);
+		normalStyle.setFontName("DejaVu Sans");
+		normalStyle.setFontSize(8f);
+		normalStyle.setPdfFontName("Helvetica");
+		normalStyle.setPdfEncoding("Cp1252");
+		normalStyle.setPdfEmbedded(Boolean.FALSE);
+		jasperPrint.addStyle(normalStyle);
+
+		JRDesignStyle boldStyle = new JRDesignStyle();
+		boldStyle.setName("Sans_Bold");
+		boldStyle.setFontName("DejaVu Sans");
+		boldStyle.setFontSize(8f);
+		boldStyle.setBold(Boolean.TRUE);
+		boldStyle.setPdfFontName("Helvetica-Bold");
+		boldStyle.setPdfEncoding("Cp1252");
+		boldStyle.setPdfEmbedded(Boolean.FALSE);
+		jasperPrint.addStyle(boldStyle);
+
+		JRDesignStyle italicStyle = new JRDesignStyle();
+		italicStyle.setName("Sans_Italic");
+		italicStyle.setFontName("DejaVu Sans");
+		italicStyle.setFontSize(8f);
+		italicStyle.setItalic(Boolean.TRUE);
+		italicStyle.setPdfFontName("Helvetica-Oblique");
+		italicStyle.setPdfEncoding("Cp1252");
+		italicStyle.setPdfEmbedded(Boolean.FALSE);
+		jasperPrint.addStyle(italicStyle);
+		
+		JRPrintPage page = new JRBasePrintPage();
+
+		JRPrintLine line = new JRBasePrintLine(jasperPrint.getDefaultStyleProvider());
+		line.setX(40);
+		line.setY(50);
+		line.setWidth(515);
+		line.setHeight(0);
+		page.addElement(line);
+		
+/**
+		JRPrintImage image = new JRBasePrintImage(jasperPrint.getDefaultStyleProvider());
+		image.setX(45);
+		image.setY(55);
+		image.setWidth(165);
+		image.setHeight(40);
+		image.setScaleImage(ScaleImageEnum.CLIP);
+		image.setRenderer(
+			ResourceRenderer.getInstance("jasperreports.png", false)
+			);
+		page.addElement(image);
+**/
+
+		JRPrintText text = new JRBasePrintText(jasperPrint.getDefaultStyleProvider());
+		text.setX(210);
+		text.setY(55);
+		text.setWidth(345);
+		text.setHeight(30);
+		text.setTextHeight(text.getHeight());
+		text.setHorizontalTextAlign(HorizontalTextAlignEnum.RIGHT);
+		text.setLineSpacingFactor(1.3133681f);
+		text.setLeadingOffset(-4.955078f);
+		text.setStyle(boldStyle);
+		text.setFontSize(18f);
+		text.setText("JasperReports Project Description");
+		page.addElement(text);
+
+		text = new JRBasePrintText(jasperPrint.getDefaultStyleProvider());
+		text.setX(210);
+		text.setY(85);
+		text.setWidth(325);
+		text.setHeight(15);
+		text.setTextHeight(text.getHeight());
+		text.setHorizontalTextAlign(HorizontalTextAlignEnum.RIGHT);
+		text.setLineSpacingFactor(1.329241f);
+		text.setLeadingOffset(-4.076172f);
+		text.setStyle(italicStyle);
+		text.setFontSize(12f);
+		text.setText((new SimpleDateFormat("EEE, MMM d, yyyy")).format(new Date()));
+		page.addElement(text);
+
+		text = new JRBasePrintText(jasperPrint.getDefaultStyleProvider());
+		text.setX(40);
+		text.setY(150);
+		text.setWidth(515);
+		text.setHeight(200);
+		text.setTextHeight(text.getHeight());
+		text.setHorizontalTextAlign(HorizontalTextAlignEnum.JUSTIFIED);
+		text.setLineSpacingFactor(1.329241f);
+		text.setLeadingOffset(-4.076172f);
+		text.setStyle(normalStyle);
+		text.setFontSize(14f);
+		text.setText(
+			"JasperReports is a powerful report-generating tool that has the ability to deliver rich content onto the screen, to the printer or into PDF, HTML, XLS, CSV or XML files.\n\n" +
+			"It is entirely written in Java and can be used in a variety of Java enabled applications, including J2EE or Web applications, to generate dynamic content.\n\n" +
+			"Its main purpose is to help creating page oriented, ready to print documents in a simple and flexible manner."
+			);
+		page.addElement(text);
+
+		jasperPrint.addPage(page);
+
+		return jasperPrint;
+	}
+}
