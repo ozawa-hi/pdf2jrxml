@@ -1,6 +1,7 @@
 package hozawa.com.pdf2jrxml;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.pdfbox.pdmodel.PDPage;
 
@@ -15,7 +16,9 @@ public class Page {
 	private PDPage page;
 	private List<JRDesignElement> elementList;
 	private String title;
+	private Map<String, Object> fields;
 	
+	// page
 	public void setPage(PDPage page) {
 		this.page = page;
 	}
@@ -23,6 +26,7 @@ public class Page {
 		return this.page;
 	}
 	
+	// elementList
 	public void setElementList(List<JRDesignElement> elementList) {
 		this.elementList = elementList;
 	}
@@ -33,10 +37,22 @@ public class Page {
 		return this.elementList;
 	}
 
+	// String
 	public void setTitle(String title) {
 		this.title = title;
 	}
 	public String getTitle() {
 		return this.title;
+	}
+	
+	// Map<String, Object>
+	public void setFields(Map<String, Object> fields) {
+		this.fields = fields;
+	}
+	public void addFields(Map<String, Object> fields) {
+		this.fields.putAll(fields);
+	}
+	public Map<String, Object> getFields() {
+		return this.fields;
 	}
 }

@@ -5,14 +5,24 @@ import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.pdfbox.cos.COSArray;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDDocumentCatalog;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
+import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
+import org.apache.pdfbox.pdmodel.interactive.form.PDField;
+import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
 import org.apache.pdfbox.text.PDFTextStripper;
+
+import org.apache.pdfbox.cos.COSNumber;
 
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRReport;
@@ -20,10 +30,12 @@ import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.design.JRDesignBand;
 import net.sf.jasperreports.engine.design.JRDesignElement;
 import net.sf.jasperreports.engine.design.JRDesignExpression;
+import net.sf.jasperreports.engine.design.JRDesignField;
 import net.sf.jasperreports.engine.design.JRDesignImage;
 import net.sf.jasperreports.engine.design.JRDesignLine;
 import net.sf.jasperreports.engine.design.JRDesignRectangle;
 import net.sf.jasperreports.engine.design.JRDesignStaticText;
+import net.sf.jasperreports.engine.design.JRDesignTextField;
 import net.sf.jasperreports.engine.design.JasperDesign;
 import net.sf.jasperreports.engine.type.FillEnum;
 import net.sf.jasperreports.engine.type.HorizontalImageAlignEnum;
@@ -96,9 +108,14 @@ public class JrxmlReport {
                 List<JRDesignElement> imgList = extractImageInPage(config, pdfPage, document, pageNo);
                 pdfPage.addElementList(imgList);
                 
-                // process lines
+                // process lines and rectangles
                 List<JRDesignElement> lineList = extractLineInPage(config, pdfPage, document, pageNo);
                 pdfPage.addElementList(lineList);
+                
+                // process input text fields
+                List<JRDesignElement> inputList = extractFormFields(config, pdfPage, document, pageNo);
+                pdfPage.addElementList(inputList);
+                
         	} else {
         		return null;
         	}
@@ -110,12 +127,13 @@ public class JrxmlReport {
 	}
 	
 	/**
+	 * Extract text strings in specified page of the pdf file.
 	 * 
 	 * @param config configuration properties
 	 * @param pdfPage
 	 * @param document
-	 * @param pageNo
-	 * @return
+	 * @param pageNo page number of pdf file to process.
+	 * @return JRDesignElement with same information as extracted text.
 	 * @throws IOException
 	 */
 	private List<JRDesignElement> extractTextInPage(Config config, Page pdfPage, PDDocument document, int pageNo) throws IOException {
@@ -175,7 +193,6 @@ public class JrxmlReport {
 				charList.remove(0);
 			}
 			
-			
 			int width = convertString2Int(attributeList[2]);
 			int height = convertString2Int(attributeList[3]);
 			
@@ -210,6 +227,16 @@ public class JrxmlReport {
 		return element;
 	}
 	
+	/**
+	 * Extract images in specified page of the pdf file. Extracted images are saved in img directory specified in the configuration.
+	 * 
+	 * @param config
+	 * @param pdfPage
+	 * @param document
+	 * @param pageNo page number of pdf file to process.
+	 * @return
+	 * @throws IOException
+	 */
 	private List<JRDesignElement> extractImageInPage(Config config, Page pdfPage, PDDocument document, int pageNo) throws IOException {
 		List<JRDesignElement> elementList = new ArrayList<JRDesignElement>();
 		
@@ -253,6 +280,16 @@ public class JrxmlReport {
         return elementList;
 	}
 
+	/**
+	 * Extract lines in specified page of the pdf file.
+	 * 
+	 * @param config
+	 * @param pdfPage
+	 * @param document
+	 * @param pageNo
+	 * @return
+	 * @throws IOException
+	 */
 	private List<JRDesignElement> extractLineInPage(Config config, Page pdfPage, PDDocument document, int pageNo) throws IOException {
 		List<JRDesignElement> elementList = new ArrayList<JRDesignElement>();
 		
@@ -294,9 +331,75 @@ public class JrxmlReport {
         
 		return elementList;
 	}
+	
+	private List<JRDesignElement> extractFormFields(Config config, Page pdfPage, PDDocument document, int pageNo) throws IOException {
+		List<JRDesignElement> elementList = new ArrayList<JRDesignElement>();
 		
+		Map<String, Object> fields = new HashMap<String, Object>();
+		
+        PDDocumentCatalog pdCatalog = document.getDocumentCatalog();
+        PDAcroForm pdAcroForm = pdCatalog.getAcroForm();
+        for (PDField pdField : pdAcroForm.getFields()) {
+
+        	fields.put(pdField.getPartialName(), java.lang.String.class);	// TODO set right class
+        	JRDesignTextField element = createTextField(pdField, pdfPage);
+        	if (element != null) {
+        		elementList.add(element);
+        	}
+        }
+        pdfPage.setFields(fields);
+        return elementList;
+	}
+	
+	private JRDesignTextField createTextField(PDField pdField, Page pdfPage) {
+		JRDesignTextField element = null;
+        	switch (pdField.getFieldType()) {
+        	case "Tx":
+        		PDTextField pdTextField = (PDTextField)pdField;
+        		int alignment = pdTextField.getQ();
+
+        		element = new JRDesignTextField();
+        		
+        		COSDictionary fieldDict = pdField.getCOSObject();
+        		COSArray fieldAreaArray = (COSArray)fieldDict.getDictionaryObject(COSName.RECT);
+
+        		float left = (float) ((COSNumber)fieldAreaArray.get(0)).floatValue();
+        		float bottom = (float) ((COSNumber)fieldAreaArray.get(1)).floatValue();
+        		float right = (float) ((COSNumber)fieldAreaArray.get(2)).floatValue();
+        		float top = (float) ((COSNumber)fieldAreaArray.get(3)).floatValue();
+        		
+        		int height = Math.round(top-bottom);
+        		int y = Math.round(pdfPage.getPage().getMediaBox().getHeight() - top);
+        		
+        		element.setBlankWhenNull(true);
+        		element.setX(Math.round(left));
+        		element.setY(y);
+        		element.setWidth(Math.round(right-left));
+        		element.setHeight(height);
+        		switch (alignment) {
+        		case PDTextField.QUADDING_LEFT:
+        			element.setHorizontalTextAlign(HorizontalTextAlignEnum.LEFT);
+        			break;
+        		case PDTextField.QUADDING_RIGHT:
+        			element.setHorizontalTextAlign(HorizontalTextAlignEnum.RIGHT);
+        			break;
+        		case PDTextField.QUADDING_CENTERED:
+        			element.setHorizontalTextAlign(HorizontalTextAlignEnum.CENTER);
+        			break;
+        		}
+        		element.setFontSize(22f);
+        	    JRDesignExpression expression = new JRDesignExpression();
+//        	    expression.setValueClass(java.lang.String.class);
+        	    expression.setText("$F{" + pdField.getPartialName() + "}");
+        	    element.setExpression(expression);
+
+        		break;
+        	}
+		return element;
+	}
+	
 	/**
-	 * Convert String to int. If specified String is null or an illegal number, return 0.
+	 * Convert String to int. If specified String is null or an illegal int, return 0.
 	 * 
 	 * @param value String value to convert to int.
 	 * @return int value of String as an rounded int.
@@ -312,6 +415,12 @@ public class JrxmlReport {
 		}
 	}
 	
+	/**
+	 * Convert String to float.  If specified String is null or an illegal float, return 0.
+	 * 
+	 * @param value
+	 * @return
+	 */
 	private float convertString2Float(String value) {
 		if (value == null) {
 			return 0;
@@ -323,6 +432,12 @@ public class JrxmlReport {
 		}
 	}
 	
+	/**
+	 * Extract font name from argument 'value'.
+	 * 
+	 * @param value
+	 * @return
+	 */
 	private String getFontName(String value) {
 		if (value == null) {
 			return null;
@@ -391,12 +506,13 @@ public class JrxmlReport {
 //	    fields.put("Street", java.lang.String.class);
 //	    fields.put("City", java.lang.String.class);
 //
-//	    for (Map.Entry<String, Object> entry : fields.entrySet()) {
-//	    	JRDesignField field = new JRDesignField();
-//	    	field.setName(entry.getKey());
-//	    	field.setValueClass((Class<?>) entry.getValue());
-//	    	jasperDesign.addField(field);
-//	    }
+	    Map<String, Object> fields = page.getFields();
+	    for (Map.Entry<String, Object> entry : fields.entrySet()) {
+	    	JRDesignField field = new JRDesignField();
+	    	field.setName(entry.getKey());
+	    	field.setValueClass((Class<?>) entry.getValue());
+	    	jasperDesign.addField(field);
+	    }
 	    
 	    //Title
 	    JRDesignBand band = new JRDesignBand();

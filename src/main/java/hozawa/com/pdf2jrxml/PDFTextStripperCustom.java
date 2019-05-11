@@ -18,7 +18,7 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 
 public class PDFTextStripperCustom extends PDFTextStripper {
-	private List<Map<String, Object>> charList = new ArrayList<Map<String, Object>>();
+	private List<Map<String, Object>> charList = new ArrayList<Map<String, Object>>();	// hold character color
 
 	public PDFTextStripperCustom() throws IOException {
 		//super();
@@ -77,6 +77,11 @@ public class PDFTextStripperCustom extends PDFTextStripper {
 
     }
     
+    /**
+     * Return color of characters.
+     * 
+     * @return color of characters.
+     */
     public List<Map<String, Object>> getCharList() {
     	return this.charList;
     }
