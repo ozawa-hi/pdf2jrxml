@@ -1,4 +1,4 @@
-package hozawa.com.pdf2jrxml;
+package com.hozawa.pdf2jrxml;
 
 import java.util.List;
 import java.util.Map;

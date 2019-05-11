@@ -1,4 +1,4 @@
-package hozawa.com.pdf2jrxml;
+package com.hozawa.pdf2jrxml;
 
 import net.sf.jasperreports.engine.JRException;
 
@@ -80,21 +80,22 @@ public class Pdf2Jrxml {
 			// pdf file
 			if (cmd.hasOption("i")) {
 				pdfFilename = cmd.getOptionValue("i");
+				config.setPdfFilename(pdfFilename);
 			}
+
 			// jrxml file
 			if (cmd.hasOption("o")) {
 				jrxmlFilename = cmd.getOptionValue("o");
+				config.setJrxmlFilename(jrxmlFilename);
 			}
-		
 			// generate jrxml from pdf file
-			report.generateJrxml(config, pdfFilename, jrxmlFilename);
+			report.generateJrxml(config, config.getPdfFilename(), config.getJrxmlFilename());
 		} catch (ParseException e) {
 			help(options);
 		} catch (JRException e) {
 			e.printStackTrace();
 		}
-    	
-    	System.out.println("Finished.\ninput pdf filename:" + pdfFilename + "\noutput jrxml filename:" + jrxmlFilename);
+    	System.out.println("Finished.\ninput pdf filename:" + config.getPdfFilename() + "\noutput jrxml filename:" + config.getJrxmlFilename());
     }
 	
     /**

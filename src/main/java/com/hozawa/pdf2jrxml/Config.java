@@ -1,4 +1,4 @@
-package hozawa.com.pdf2jrxml;
+package com.hozawa.pdf2jrxml;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -78,24 +78,23 @@ public class Config {
 		try {
 			is = new BufferedInputStream( new FileInputStream(propertyFile));
 			config.load(is);
-			
-			setPdfFilename(config.getProperty("pdf_filename"));
-			setJrxmlFilename(config.getProperty("jrxmlFilename"));
-			
-			setImgDir(config.getProperty("img_dir"));
-			
-			setMarginLeft(config.getProperty("margin_left"));
-			setMarginRight(config.getProperty("margin_right"));
-			setMarginTop(config.getProperty("margin_top"));
-			setMarginBottom(config.getProperty("margin_bottom"));
-
-			setEncoding(config.getProperty("encoding"));
-			setTitle(config.getProperty("title_default"));
-
 		} catch (IOException e1) {
 			// if properties file does not exist, use the internal default values
 			System.out.println("configuration file not found. Using internal default values.");
 		}
+			
+		setPdfFilename(config.getProperty("pdf_filename"));
+		setJrxmlFilename(config.getProperty("jrxmlFilename"));
+		
+		setImgDir(config.getProperty("img_dir"));
+		
+		setMarginLeft(config.getProperty("margin_left"));
+		setMarginRight(config.getProperty("margin_right"));
+		setMarginTop(config.getProperty("margin_top"));
+		setMarginBottom(config.getProperty("margin_bottom"));
+
+		setEncoding(config.getProperty("encoding"));
+		setTitle(config.getProperty("title_default"));
 
 		try {
 			if(is != null) {
